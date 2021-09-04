@@ -50,6 +50,16 @@ impl Platform for AndroidPlatform {
   fn input_state(&self) -> InputState {
     self.input_state.clone()
   }
+
+  fn start_thread<F>(&self, name: &str, callback: F)
+  where 
+        F: FnOnce(),
+        F: Send + 'static {
+    std::thread::Builder::new()
+      .name(name.to_string())
+      .spawn(callback)
+      .unwrap();
+  }
 }
 
 pub struct AndroidWindow {

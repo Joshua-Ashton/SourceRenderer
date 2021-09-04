@@ -6,26 +6,26 @@ use std::f32;
 use sourcerenderer_core::graphics::Backend;
 use crate::renderer::renderer_assets::*;
 
-pub(super) struct RendererStaticDrawable<B: Backend> {
-  pub(super) entity: Entity,
-  pub(super) transform: Matrix4,
-  pub(super) old_transform: Matrix4,
-  pub(super) model: Arc<RendererModel<B>>,
-  pub(super) receive_shadows: bool,
-  pub(super) cast_shadows: bool,
-  pub(super) can_move: bool
+pub struct RendererStaticDrawable<B: Backend> {
+  pub entity: Entity,
+  pub transform: Matrix4,
+  pub old_transform: Matrix4,
+  pub model: Arc<RendererModel<B>>,
+  pub receive_shadows: bool,
+  pub cast_shadows: bool,
+  pub can_move: bool
 }
 
 #[derive(Clone)]
-pub(crate) struct View {
-  pub(super) view_matrix: Matrix4,
-  pub(super) proj_matrix: Matrix4,
-  pub(super) old_camera_matrix: Matrix4,
-  pub(super) camera_transform: Matrix4,
-  pub(super) camera_fov: f32,
-  pub(super) near_plane: f32,
-  pub(super) far_plane: f32,
-  pub(super) drawable_parts: Vec<DrawablePart>
+pub struct View {
+  pub view_matrix: Matrix4,
+  pub proj_matrix: Matrix4,
+  pub old_camera_matrix: Matrix4,
+  pub camera_transform: Matrix4,
+  pub camera_fov: f32,
+  pub near_plane: f32,
+  pub far_plane: f32,
+  pub drawable_parts: Vec<DrawablePart>
 }
 
 impl Default for View {
@@ -45,6 +45,6 @@ impl Default for View {
 
 #[derive(Clone)]
 pub struct DrawablePart {
-  pub(super) drawable_index: usize,
-  pub(super) part_index: usize
+  pub drawable_index: usize,
+  pub part_index: usize
 }

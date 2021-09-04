@@ -51,11 +51,14 @@ impl<P: Platform> Renderer<P> {
     }
   }
 
-  pub fn run(window: &P::Window,
-             instance: &Arc<<P::GraphicsBackend as Backend>::Instance>,
-             device: &Arc<<P::GraphicsBackend as Backend>::Device>,
-             swapchain: &Arc<<P::GraphicsBackend as Backend>::Swapchain>,
-             asset_manager: &Arc<AssetManager<P>>) -> Arc<Renderer<P>> {
+  pub fn run(
+    platform: &P,
+    window: &P::Window,
+    instance: &Arc<<P::GraphicsBackend as Backend>::Instance>,
+    device: &Arc<<P::GraphicsBackend as Backend>::Device>,
+    swapchain: &Arc<<P::GraphicsBackend as Backend>::Swapchain>,
+    asset_manager: &Arc<AssetManager<P>>) -> Arc<Renderer<P>> {
+
     let (sender, receiver) = unbounded::<RendererCommand>();
     let renderer = Arc::new(Renderer::new(sender.clone(), instance, device, window, swapchain.surface()));
 
@@ -64,9 +67,7 @@ impl<P: Platform> Renderer<P> {
     let c_swapchain = swapchain.clone();
     let c_asset_manager = asset_manager.clone();
 
-    std::thread::Builder::new()
-      .name("RenderThread".to_string())
-      .spawn(move || {
+    platform.start_thread("RenderThread", move || {
       let mut internal = RendererInternal::new(&c_renderer, &c_device, &c_swapchain, &c_asset_manager, sender, receiver, c_renderer.primary_camera());
       loop {
         if !c_renderer.is_running.load(Ordering::SeqCst) {
@@ -74,7 +75,7 @@ impl<P: Platform> Renderer<P> {
         }
         internal.render();
       }
-    }).unwrap();
+    });
     renderer
   }
 
@@ -99,7 +100,7 @@ impl<P: Platform> Renderer<P> {
     let mut surface_guard = self.surface.lock().unwrap();
     *surface_guard = surface.clone();
   }
-  pub(super) fn surface(&self) -> MutexGuard<Arc<<P::GraphicsBackend as Backend>::Surface>> {
+  pub fn surface(&self) -> MutexGuard<Arc<<P::GraphicsBackend as Backend>::Surface>> {
     self.surface.lock().unwrap()
   }
 
@@ -113,6 +114,10 @@ impl<P: Platform> Renderer<P> {
 
   pub fn stop(&self) {
     self.is_running.store(false, Ordering::SeqCst);
+  }
+
+  pub fn device(&self) -> &Arc<<P::GraphicsBackend as Backend>::Device> {
+    &self.device
   }
 }
 

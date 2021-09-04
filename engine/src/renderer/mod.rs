@@ -21,12 +21,12 @@ pub use self::ecs::StaticRenderableComponent;
 pub use self::ecs::PointLightComponent;
 pub use self::drawable::DrawablePart;
 pub use self::camera::LateLatchCamera;
-use self::drawable::View;
+pub use self::drawable::View;
 pub use self::ecs::RendererInterface;
 pub use self::command::RendererCommand;
 pub use self::light::PointLight;
 use self::drawable::RendererStaticDrawable;
-use self::renderer_scene::RendererScene;
+pub use self::renderer_scene::RendererScene;
 
 #[cfg(feature = "threading")]
 use self::renderer_internal::RendererInternal;

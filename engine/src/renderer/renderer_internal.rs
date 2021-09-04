@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use crate::renderer::{Renderer, RendererStaticDrawable};
 use crossbeam_channel::{Receiver, Sender};
 use crate::renderer::command::RendererCommand;
-use std::time::{SystemTime, Duration};
+use std::time::Duration;
 use crate::asset::AssetManager;
 use sourcerenderer_core::{Platform, Vec4};
 use sourcerenderer_core::graphics::{SwapchainError, Backend,Swapchain, Device};
@@ -15,6 +15,7 @@ use crate::renderer::renderer_assets::*;
 use sourcerenderer_core::atomic_refcell::AtomicRefCell;
 use rayon::prelude::*;
 use crate::math::Frustum;
+use instant::Instant;
 
 use super::PointLight;
 use super::passes::desktop::desktop_renderer::DesktopRenderer;
@@ -32,7 +33,7 @@ pub(super) struct RendererInternal<P: Platform> {
   view: Arc<AtomicRefCell<View>>,
   sender: Sender<RendererCommand>,
   receiver: Receiver<RendererCommand>,
-  last_tick: SystemTime,
+  last_tick: Instant,
   primary_camera: Arc<LateLatchCamera<P::GraphicsBackend>>,
   assets: RendererAssets<P>
 }
@@ -65,7 +66,7 @@ impl<P: Platform> RendererInternal<P> {
       view,
       sender,
       receiver,
-      last_tick: SystemTime::now(),
+      last_tick: Instant::now(),
       primary_camera: primary_camera.clone(),
       assets,
       lightmap
@@ -86,7 +87,7 @@ impl<P: Platform> RendererInternal<P> {
       let message = message_opt.take().unwrap();
       match message {
         RendererCommand::EndFrame => {
-          self.last_tick = SystemTime::now();
+          self.last_tick = Instant::now();
           break;
         }
 

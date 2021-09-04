@@ -8,12 +8,12 @@ use sourcerenderer_core::graphics::{ TextureInfo, MemoryUsage, SampleCount, Form
 
 use sourcerenderer_core::atomic_refcell::AtomicRefCell;
 
-pub(super) struct RendererTexture<B: Backend> {
-  pub(super) view: AtomicRefCell<Arc<B::TextureShaderResourceView>>
+pub struct RendererTexture<B: Backend> {
+  pub view: AtomicRefCell<Arc<B::TextureShaderResourceView>>
 }
 
-pub(super) struct RendererMaterial<B: Backend> {
-  pub(super) albedo: AtomicRefCell<Arc<RendererTexture<B>>>
+pub struct RendererMaterial<B: Backend> {
+  pub albedo: AtomicRefCell<Arc<RendererTexture<B>>>
 }
 
 impl<B: Backend> PartialEq for RendererMaterial<B> {
@@ -36,16 +36,16 @@ impl<B: Backend> Ord for RendererMaterial<B> {
   }
 }
 
-pub(super) struct RendererModel<B: Backend> {
-  pub(super) mesh: Arc<RendererMesh<B>>,
-  pub(super) materials: Box<[Arc<RendererMaterial<B>>]>
+pub struct RendererModel<B: Backend> {
+  pub mesh: Arc<RendererMesh<B>>,
+  pub materials: Box<[Arc<RendererMaterial<B>>]>
 }
 
-pub(super) struct RendererMesh<B: Backend> {
-  pub(super) vertices: Arc<B::Buffer>,
-  pub(super) indices: Option<Arc<B::Buffer>>,
-  pub(super) parts: Box<[MeshRange]>,
-  pub(super) bounding_box: Option<BoundingBox>
+pub struct RendererMesh<B: Backend> {
+  pub vertices: Arc<B::Buffer>,
+  pub indices: Option<Arc<B::Buffer>>,
+  pub parts: Box<[MeshRange]>,
+  pub bounding_box: Option<BoundingBox>
 }
 
 

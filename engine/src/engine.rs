@@ -1,5 +1,6 @@
 use sourcerenderer_core::platform::{Platform, InputCommands};
 use std::sync::Arc;
+use std::sync::MutexGuard;
 
 use sourcerenderer_core::ThreadPoolBuilder;
 use sourcerenderer_core::graphics::*;
@@ -18,10 +19,14 @@ pub struct Engine<P: Platform> {
 }
 
 impl<P: Platform> Engine<P> {
+  #[cfg(not(feature = "web"))]
   pub fn initialize_global() {
     let cores = num_cpus::get();
     ThreadPoolBuilder::new().num_threads(cores - 2).build_global().unwrap();
   }
+
+  #[cfg(feature = "web")]
+  pub fn initialize_global() {}
 
   pub fn run(platform: Box<P>) -> Self {
     let instance = platform.create_graphics(true).expect("Failed to initialize graphics");
@@ -30,9 +35,9 @@ impl<P: Platform> Engine<P> {
     let mut adapters = instance.clone().list_adapters();
     let device = Arc::new(adapters.remove(0).create_device(&surface));
     let swapchain = Arc::new(platform.window().create_swapchain(false, &device, &surface));
-    let asset_manager = AssetManager::<P>::new(&device);
-    let renderer = Renderer::<P>::run(platform.window(), &instance, &device, &swapchain, &asset_manager);
-    let game = Game::<P>::run(&renderer, &asset_manager, TICK_RATE);
+    let asset_manager = AssetManager::<P>::new(&platform, &device);
+    let renderer = Renderer::<P>::run(&platform, platform.window(), &instance, &device, &swapchain, &asset_manager);
+    let game = Game::<P>::run(&platform, &renderer, &asset_manager, TICK_RATE);
     Self {
       renderer,
       game,
@@ -72,5 +77,13 @@ impl<P: Platform> Engine<P> {
       return false;
     }
     return true;
+  }
+
+  pub fn device(&self) -> &Arc<<P::GraphicsBackend as Backend>::Device> {
+    self.renderer.device()
+  }
+
+  pub fn surface(&self) -> MutexGuard<Arc<<P::GraphicsBackend as Backend>::Surface>> {
+    self.renderer.surface()
   }
 }

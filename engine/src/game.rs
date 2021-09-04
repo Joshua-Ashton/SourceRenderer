@@ -1,6 +1,6 @@
 use std::{sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}}};
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 use legion::{World, Resources, Schedule};
 
@@ -16,8 +16,9 @@ use legion::query::{FilterResult, LayoutFilter};
 use legion::storage::ComponentTypeId;
 use sourcerenderer_core::platform::{InputState, InputCommands};
 use crate::{fps_camera::{fps_camera_rotation, FPSCamera}, renderer::RendererInterface};
+use instant::Instant;
 
-pub struct TimeStampedInputState(InputState, SystemTime);
+pub struct TimeStampedInputState(InputState, Instant);
 
 #[cfg(feature = "threading")]
 pub struct Game<P: Platform> {
@@ -54,9 +55,12 @@ impl LayoutFilter for FilterAll {
 
 #[cfg(feature = "threading")]
 impl<P: Platform> Game<P> {
-  pub fn run(renderer: &Arc<Renderer<P>>,
-                          asset_manager: &Arc<AssetManager<P>>,
-                          tick_rate: u32) -> Arc<Self> {
+  pub fn run(
+    platform: &P,
+    renderer: &Arc<Renderer<P>>,
+    asset_manager: &Arc<AssetManager<P>>,
+    tick_rate: u32) -> Arc<Self>{
+
     asset_manager.add_loader(Box::new(BspLevelLoader::new()));
     asset_manager.add_loader(Box::new(VPKContainerLoader::new()));
     asset_manager.add_loader(Box::new(VTFTextureLoader::new()));
@@ -70,6 +74,8 @@ impl<P: Platform> Game<P> {
         let csgo_path = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Counter-Strike Global Offensive";
     #[cfg(target_os = "android")]
       let csgo_path = "content://com.android.externalstorage.documents/tree/primary%3Agames%2Fcsgo/document/primary%3Agames%2Fcsgo";
+    #[cfg(target_arch = "wasm32")]
+      let csgo_path = "";
 
     println!("Csgo path: {:?}", csgo_path);
 
@@ -78,7 +84,7 @@ impl<P: Platform> Game<P> {
     let mut level = asset_manager.load_level("bistro.glb/scene/Scene").unwrap();*/
 
 
-    let mut level = {
+    /*let mut level = {
       asset_manager.add_container(Box::new(CSGODirectoryContainer::new::<P>(csgo_path).unwrap()));
       let progress = asset_manager.request_asset("pak01_dir", AssetType::Container, AssetLoadPriority::Normal);
       while !progress.is_done() {
@@ -86,10 +92,10 @@ impl<P: Platform> Game<P> {
       }
       asset_manager.load_level("de_overpass.bsp").unwrap()
     };
-    println!("Done loading level");
+    println!("Done loading level");*/
 
     let game = Arc::new(Self {
-      input_state: Mutex::new(TimeStampedInputState(InputState::default(), SystemTime::now())),
+      input_state: Mutex::new(TimeStampedInputState(InputState::default(), Instant::now())),
       late_latch_camera: renderer.primary_camera().clone(),
       fps_camera: Mutex::new(FPSCamera::new()),
       is_running: AtomicBool::new(true)
@@ -98,7 +104,7 @@ impl<P: Platform> Game<P> {
     let c_renderer = renderer.clone();
     let c_asset_manager = asset_manager.clone();
     let c_game = game.clone();
-    thread::Builder::new().name("GameThread".to_string()).spawn(move || {
+    platform.start_thread("GameThread", move || {
       let mut world = World::default();
       let mut fixed_schedule = Schedule::builder();
       let mut schedule = Schedule::builder();
@@ -118,7 +124,7 @@ impl<P: Platform> Game<P> {
 
       println!("Point Light: {:?}", point_light_entity);
 
-      world.move_from(&mut level, &FilterAll {});
+      //world.move_from(&mut level, &FilterAll {});
 
       resources.insert(c_renderer.primary_camera().clone());
 
@@ -129,8 +135,8 @@ impl<P: Platform> Game<P> {
       let mut tick = 0u64;
       let mut schedule = schedule.build();
       let mut fixed_schedule = fixed_schedule.build();
-      let mut last_tick_time = SystemTime::now();
-      let mut last_iter_time = SystemTime::now();
+      let mut last_tick_time = Instant::now();
+      let mut last_iter_time = Instant::now();
       loop {
         if !c_game.is_running() {
           break;
@@ -140,10 +146,10 @@ impl<P: Platform> Game<P> {
           resources.insert((input_guard.0).clone());
         }
 
-        let now = SystemTime::now();
+        let now = Instant::now();
 
         // run fixed step systems first
-        let mut tick_delta = now.duration_since(last_tick_time).unwrap();
+        let mut tick_delta = now.duration_since(last_tick_time);
         if c_renderer.is_saturated() && tick_delta <= tick_duration {
           std::thread::yield_now();
         }
@@ -153,16 +159,16 @@ impl<P: Platform> Game<P> {
           resources.insert(Tick(tick));
           fixed_schedule.execute(&mut world, &mut resources);
           tick += 1;
-          tick_delta = now.duration_since(last_tick_time).unwrap();
+          tick_delta = now.duration_since(last_tick_time);
         }
 
-        let delta = now.duration_since(last_iter_time).unwrap();
+        let delta = now.duration_since(last_iter_time);
         last_iter_time = now;
         resources.insert(TickDelta(tick_delta));
         resources.insert(DeltaTime(delta));
         schedule.execute(&mut world, &mut resources);
       }
-    }).unwrap();
+    });
 
     game
   }
@@ -170,11 +176,11 @@ impl<P: Platform> Game<P> {
   pub fn update_input_state(&self, input_state: InputState) {
     {
       let mut input_guard = self.input_state.lock().unwrap();
-      let now = SystemTime::now();
+      let now = Instant::now();
 
       #[cfg(feature = "late-latching")]
       {
-        let delta = now.duration_since(input_guard.1).unwrap();
+        let delta = now.duration_since(input_guard.1);
         {
           let mut fps_camera = self.fps_camera.lock().unwrap();
           self.late_latch_camera.update_rotation(fps_camera_rotation::<P>(&input_state, &mut fps_camera, delta.as_secs_f32()));
