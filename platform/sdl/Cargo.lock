@@ -501,7 +501,6 @@ dependencies = [
  "legion_codegen",
  "parking_lot",
  "paste",
- "rayon",
  "smallvec",
  "thiserror",
  "uuid",
